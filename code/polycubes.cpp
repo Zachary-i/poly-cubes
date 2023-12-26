@@ -12,7 +12,7 @@ struct Shape {
   int numCubes;
   Cube* shapeCubesPtr;
   int totalDistance;
-  Shape(int nCubes = 0, Cube* cubesPtr = new Cube(),
+  Shape(int nCubes = 1, Cube* cubesPtr = new Cube(),
 	int distance = 0):numCubes(nCubes),
 			       shapeCubesPtr(cubesPtr),
 			       totalDistance(distance){
@@ -33,9 +33,9 @@ private:
   }
 };
 
-int calculateShapes(int n, Shape* shapesPtr){
+int calculateShapes(int n, Shape*& shapesPtr){
 
-  if(n > 1){
+  if(n <= 1){
     shapesPtr = new Shape();
     return 1;
   } else {
@@ -97,6 +97,7 @@ int calculateShapes(int n, Shape* shapesPtr){
       }
       
     }
+    delete[] previousShapesPtr;
     return totalNumShapes;
   }
 }
@@ -106,7 +107,15 @@ void tryToAddCube(Cube* cubePtr, Shape* baseShapePtr, Shape* shapesPtr){
 }
 
 void printShapes(int n, Shape* shapesPtr){
-  std::cout << "[0,0,0]";
+  for(int i = 0; i < (n*n); i++){
+    for(int j = 0; j < (shapesPtr+i)->numCubes; j++){
+      std::cout << "[" << ((shapesPtr+i)->shapeCubesPtr + j)->x
+		<< ", " << ((shapesPtr+i)->shapeCubesPtr + j)->y
+		<< ", " << ((shapesPtr+i)->shapeCubesPtr + j)->z
+		<< "], ";
+    }
+    std::cout << "\n";
+  }
 }
 
 int main(){
