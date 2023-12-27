@@ -12,13 +12,33 @@ struct Shape {
   int numCubes;
   Cube* shapeCubesPtr;
   int totalDistance;
-  Shape(int nCubes = 1, Cube* cubesPtr = new Cube(),
+  Shape(int nCubes = 1, Cube* cubesPtr = new Cube[1],
 	int distance = 0):numCubes(nCubes),
 			       shapeCubesPtr(cubesPtr),
 			       totalDistance(distance){
     if(totalDistance == 0){
       totalDistance = calculateTotalDistance();
     }
+  }
+
+  ~Shape (){
+    delete[] shapeCubesPtr;
+  }
+
+  Shape* operator+(Cube* addedCube){
+    Cube* cubesPtr = new Cube[numCubes+1];
+    for(int i = 0; i < numCubes; i++){
+      (cubesPtr+i)->x = (shapeCubesPtr+i)->x;
+      (cubesPtr+i)->y = (shapeCubesPtr+i)->y;
+      (cubesPtr+i)->z = (shapeCubesPtr+i)->z;
+    }
+    (cubesPtr+numCubes)->x = addedCube->x;
+    (cubesPtr+numCubes)->y = addedCube->y;
+    (cubesPtr+numCubes)->z = addedCube->z;
+    int newDist = totalDistance + (addedCube->x * addedCube->x +
+				   addedCube->y * addedCube->y +
+				   addedCube->z * addedCube->z);
+    return new Shape(numCubes+1, cubesPtr, newDist);
   }
 
 private:
@@ -33,10 +53,21 @@ private:
   }
 };
 
+bool tryToAddCube(Cube* cubePtr, Shape* baseShapePtr, int n, Shape* shapesPtr){
+  Shape* potentialShapePtr = *baseShapePtr + cubePtr;
+  int index = (potentialShapePtr->totalDistance % (n*n));
+  if((shapesPtr + index)->numCubes != n){
+    *(shapesPtr + index) = *potentialShapePtr;
+    return true;
+  }
+  delete potentialShapePtr;
+  return false;
+}
+
 int calculateShapes(int n, Shape*& shapesPtr){
 
   if(n <= 1){
-    shapesPtr = new Shape();
+    shapesPtr = new Shape[1];
     return 1;
   } else {
     
@@ -50,50 +81,78 @@ int calculateShapes(int n, Shape*& shapesPtr){
     
     for(int i = 0; i < previousLength; i++){
 
-      Shape* currentShapePtr = (previousShapesPtr + i); 
-      Cube* endCubePtr = (currentShapePtr->shapeCubesPtr +
-			  (currentShapePtr->numCubes - 1));
+      Shape* currentShapePtr = (previousShapesPtr + i);
+      if(currentShapePtr->numCubes == (n-1)){
+	Cube* endCubePtr = (currentShapePtr->shapeCubesPtr +
+			    (currentShapePtr->numCubes - 1));
 
-      int endX = endCubePtr->x;
-      int endY = endCubePtr->y;
-      int endZ = endCubePtr->z;
+	int endX = endCubePtr->x;
+	int endY = endCubePtr->y;
+	int endZ = endCubePtr->z;
 
-      char testAdditions = 0;
-      // 1 = +x; 2 = -x; 4 = +y; 8 = -y; 16 = +z; 32 = -z;
+	char testAdditions = 0;
+	// 1 = +x; 2 = -x; 4 = +y; 8 = -y; 16 = +z; 32 = -z;
       
-      for(int j = 0; j < currentShapePtr->numCubes; j++){
-	Cube* currentCubePtr = currentShapePtr->shapeCubesPtr+j;
-	int x = currentCubePtr->x;
-	int y = currentCubePtr->y;
-	int z = currentCubePtr->z;
+	for(int j = 0; j < currentShapePtr->numCubes; j++){
+	  Cube* currentCubePtr = currentShapePtr->shapeCubesPtr+j;
+	  int x = currentCubePtr->x;
+	  int y = currentCubePtr->y;
+	  int z = currentCubePtr->z;
 	
-	if (endX+1 == x && endY == y && endZ == z){
-	  testAdditions |= 1;
+	  if (endX+1 == x && endY == y && endZ == z){
+	    testAdditions |= 1;
+	  }
+
+	  if (endX-1 == x && endY == y && endZ == z){
+	    testAdditions |= 2;
+	  }
+
+	  if (endX == x && endY+1 == y && endZ == z){
+	    testAdditions |= 4;
+	  }
+
+	  if (endX == x && endY-1 == y && endZ == z){
+	    testAdditions |= 8;
+	  }
+
+	  if (endX == x && endY == y && endZ+1 == z){
+	    testAdditions |= 16;
+	  }
+
+	  if (endX == x && endY == y && endZ-1 == z){
+	    testAdditions |= 32;
+	  }
 	}
 
-	if (endX-1 == x && endY == y && endZ == z){
-	  testAdditions |= 2;
+	if((testAdditions & 1) != 1){
+	  totalNumShapes += tryToAddCube(new Cube(endX+1, endY, endZ),
+					 currentShapePtr, n, shapesPtr);
 	}
 
-	if (endX == x && endY+1 == y && endZ == z){
-	  testAdditions |= 4;
+	if((testAdditions & 2) != 2){
+	  totalNumShapes += tryToAddCube(new Cube(endX-1, endY, endZ),
+					 currentShapePtr, n, shapesPtr);
 	}
 
-	if (endX == x && endY-1 == y && endZ == z){
-	  testAdditions |= 8;
+	if((testAdditions & 4) != 4){
+	  totalNumShapes += tryToAddCube(new Cube(endX, endY+1, endZ),
+					 currentShapePtr, n, shapesPtr);
 	}
 
-	if (endX == x && endY == y && endZ+1 == z){
-	  testAdditions |= 16;
+	if((testAdditions & 8) != 8){
+	  totalNumShapes += tryToAddCube(new Cube(endX, endY-1, endZ),
+					 currentShapePtr, n, shapesPtr);
 	}
 
-	if (endX == x && endY == y && endZ-1 == z){
-	  testAdditions |= 32;
+	if((testAdditions & 16) != 16){
+	  totalNumShapes += tryToAddCube(new Cube(endX, endY, endZ+1),
+					 currentShapePtr, n, shapesPtr);
 	}
-      }
 
-      if(testAdditions & 1 == 1){
-
+	if((testAdditions & 32) != 32){
+	  totalNumShapes += tryToAddCube(new Cube(endX, endY, endZ-1),
+					 currentShapePtr, n, shapesPtr);
+	}
       }
       
     }
@@ -102,19 +161,17 @@ int calculateShapes(int n, Shape*& shapesPtr){
   }
 }
 
-void tryToAddCube(Cube* cubePtr, Shape* baseShapePtr, Shape* shapesPtr){
-
-}
-
 void printShapes(int n, Shape* shapesPtr){
   for(int i = 0; i < (n*n); i++){
-    for(int j = 0; j < (shapesPtr+i)->numCubes; j++){
-      std::cout << "[" << ((shapesPtr+i)->shapeCubesPtr + j)->x
-		<< ", " << ((shapesPtr+i)->shapeCubesPtr + j)->y
-		<< ", " << ((shapesPtr+i)->shapeCubesPtr + j)->z
-		<< "], ";
-    }
+    if((shapesPtr+i)->numCubes == n){
+      for(int j = 0; j < (shapesPtr+i)->numCubes; j++){
+	std::cout << "[" << ((shapesPtr+i)->shapeCubesPtr + j)->x
+		  << ", " << ((shapesPtr+i)->shapeCubesPtr + j)->y
+		  << ", " << ((shapesPtr+i)->shapeCubesPtr + j)->z
+		  << "], ";
+      }
     std::cout << "\n";
+    }
   }
 }
 
