@@ -11,17 +11,15 @@ struct Cube {
 struct Shape {
   int numCubes;
   Cube* shapeCubesPtr;
-  int totalDistance;
+  int averageDeviation;
   Shape* nextShapePtr;
   
   Shape(int nCubes = 1, Cube* cubesPtr = new Cube[1],
-	int distance = 0, Shape* nShapePtr = nullptr):numCubes(nCubes),
-						   shapeCubesPtr(cubesPtr),
-						   totalDistance(distance),
-						   nextShapePtr(nShapePtr){
-    if(totalDistance == 0){
-      totalDistance = calculateTotalDistance();
-    }
+	Shape* nShapePtr = nullptr):numCubes(nCubes),
+				    shapeCubesPtr(cubesPtr),
+				    nextShapePtr(nShapePtr){
+    calculateTotalCoords();
+    calculateAverageDeviation();
   }
 
   ~Shape (){
@@ -39,33 +37,47 @@ struct Shape {
     (cubesPtr+numCubes)->x = addedCube->x;
     (cubesPtr+numCubes)->y = addedCube->y;
     (cubesPtr+numCubes)->z = addedCube->z;
-    int newDist = totalDistance + (addedCube->x * addedCube->x +
-				   addedCube->y * addedCube->y +
-				   addedCube->z * addedCube->z);
-    return new Shape(numCubes+1, cubesPtr, newDist, nullptr);
+    return new Shape(numCubes+1, cubesPtr, nullptr);
   }
 
 private:
-  int calculateTotalDistance(){
-    int result = 0;
-    for (int i=0; i < numCubes; i++){
-      result += ((shapeCubesPtr+i)->x * (shapeCubesPtr+i)->x +
-		 (shapeCubesPtr+i)->y * (shapeCubesPtr+i)->y +
-		 (shapeCubesPtr+i)->z * (shapeCubesPtr+i)->z);
+
+  int totalX = 0;
+  int totalY = 0;
+  int totalZ = 0;
+
+  void calculateTotalCoords(){
+    for(int i = 0; i < numCubes; i++){
+      totalX += (shapeCubesPtr+i)->x;
+      totalY += (shapeCubesPtr+i)->y;
+      totalZ += (shapeCubesPtr+i)->z;
     }
-    return result;
   }
+
+  void calculateAverageDeviation(){
+    int averageX = totalX / numCubes;
+    int averageY = totalY / numCubes;
+    int averageZ = totalZ / numCubes;
+    int totalDeviantDistSq = 0;
+    
+    for(int i = 0; i< numCubes; i++){
+      totalDeviantDistSq += ((averageX - (shapeCubesPtr+i)->x) *
+			     (averageX - (shapeCubesPtr+i)->x) +
+			     (averageY - (shapeCubesPtr+i)->y) *
+			     (averageY - (shapeCubesPtr+i)->y) +
+			     (averageZ - (shapeCubesPtr+i)->z) *
+			     (averageZ - (shapeCubesPtr+i)->z));
+    }
+
+    averageDeviation = totalDeviantDistSq * totalDeviantDistSq / numCubes;
+  }
+  
 };
 
 bool tryToAddCube(Cube* cubePtr, Shape* baseShapePtr, int n, Shape* shapesPtr){
   Shape* potentialShapePtr = *baseShapePtr + cubePtr;
-  int index = (potentialShapePtr->totalDistance % (n*n));
-  /*
-    doesn't always find symetries for example
-    [0,0,0], [1,0,0], [1,1,0], [0,1,0], [-1,1,0]
-    and [0,0,0], [1,0,0], [1,1,0], [0,1,0], [0,2,0]
-    are equivilant but don't have the same total distance
-  */
+  int index = (potentialShapePtr->averageDeviation % (n*n));
+  
   if((shapesPtr + index)->numCubes != n){
     *(shapesPtr + index) = *potentialShapePtr;
     return true;
